@@ -7,7 +7,8 @@
 #' @param q Number of latent factors (NULL for automatic selection)
 #' @param optimizer Optimizer name: "Newton-CG" (default), "grad_descent", 
 #'   "rms_prop", or "adam"
-#' @param scale Initialization scale parameter (default 0.5)
+#' @param scale Initialization scale parameter (default 1.0)
+#' @param use_kmeans Logical, whether to use k-means for initializing component means (default TRUE)
 #' @param ... Additional arguments passed to Python init_params() or fit() methods
 #'
 #' @return An mm_fit object
@@ -22,7 +23,7 @@
 #' # Get cluster labels
 #' labels <- mm_predict(fit)
 #' }
-mm_mfa_fit <- function(x, k, q = NULL, optimizer = "Newton-CG", scale = 0.5, ...) {
+mm_mfa_fit <- function(x, k, q = NULL, optimizer = "Newton-CG", scale = 1.0, use_kmeans = TRUE, ...) {
   call <- match.call()
   
   # Input validation
@@ -49,7 +50,8 @@ mm_mfa_fit <- function(x, k, q = NULL, optimizer = "Newton-CG", scale = 0.5, ...
   # Initialize parameters
   init_args <- list(
     num_components = as.integer(k),
-    scale = as.numeric(scale)
+    scale = as.numeric(scale),
+    use_kmeans = use_kmeans
   )
   
   # Add q if provided

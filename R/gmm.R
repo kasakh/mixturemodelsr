@@ -7,7 +7,8 @@
 #' @param k Number of mixture components
 #' @param optimizer Optimizer name: "Newton-CG" (default), "grad_descent", 
 #'   "rms_prop", or "adam"
-#' @param scale Initialization scale parameter (default 0.5)
+#' @param scale Initialization scale parameter (default 1.0)
+#' @param use_kmeans Logical, whether to use k-means for initializing component means (default TRUE)
 #' @param ... Additional arguments passed to Python init_params() or fit() methods
 #'
 #' @return An mm_fit object containing:
@@ -39,7 +40,7 @@
 #' mm_bic(fit)
 #' mm_aic(fit)
 #' }
-mm_gmm_fit <- function(x, k, optimizer = "Newton-CG", scale = 0.5, ...) {
+mm_gmm_fit <- function(x, k, optimizer = "Newton-CG", scale = 1.0, use_kmeans = TRUE, ...) {
   call <- match.call()
   
   # Input validation
@@ -69,7 +70,8 @@ mm_gmm_fit <- function(x, k, optimizer = "Newton-CG", scale = 0.5, ...) {
   # Initialize parameters
   init_params <- model$init_params(
     num_components = as.integer(k),
-    scale = as.numeric(scale)
+    scale = as.numeric(scale),
+    use_kmeans = use_kmeans
   )
   
   # Fit model
@@ -110,7 +112,7 @@ mm_gmm_fit <- function(x, k, optimizer = "Newton-CG", scale = 0.5, ...) {
 #' fit <- mm_gmm_constrained_fit(iris[, 1:4], k = 3)
 #' mm_bic(fit)
 #' }
-mm_gmm_constrained_fit <- function(x, k, optimizer = "Newton-CG", scale = 0.5, ...) {
+mm_gmm_constrained_fit <- function(x, k, optimizer = "Newton-CG", scale = 1.0, use_kmeans = TRUE, ...) {
   call <- match.call()
   
   # Input validation
@@ -137,7 +139,8 @@ mm_gmm_constrained_fit <- function(x, k, optimizer = "Newton-CG", scale = 0.5, .
   # Initialize parameters
   init_params <- model$init_params(
     num_components = as.integer(k),
-    scale = as.numeric(scale)
+    scale = as.numeric(scale),
+    use_kmeans = use_kmeans
   )
   
   # Fit model

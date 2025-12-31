@@ -4,7 +4,15 @@
 \alias{mm_mfa_fit}
 \title{Fit a Mixture of Factor Analyzers (MFA)}
 \usage{
-mm_mfa_fit(x, k, q = NULL, optimizer = "Newton-CG", scale = 0.5, ...)
+mm_mfa_fit(
+  x,
+  k,
+  q = NULL,
+  optimizer = "Newton-CG",
+  scale = 1,
+  use_kmeans = TRUE,
+  ...
+)
 }
 \arguments{
 \item{x}{Numeric matrix or data.frame (rows = observations, columns = features)}
@@ -16,7 +24,9 @@ mm_mfa_fit(x, k, q = NULL, optimizer = "Newton-CG", scale = 0.5, ...)
 \item{optimizer}{Optimizer name: "Newton-CG" (default), "grad_descent",
 "rms_prop", or "adam"}
 
-\item{scale}{Initialization scale parameter (default 0.5)}
+\item{scale}{Initialization scale parameter (default 1.0)}
+
+\item{use_kmeans}{Logical, whether to use k-means for initializing component means (default TRUE)}
 
 \item{...}{Additional arguments passed to Python init_params() or fit() methods}
 }

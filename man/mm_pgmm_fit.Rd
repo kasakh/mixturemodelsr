@@ -10,7 +10,8 @@ mm_pgmm_fit(
   model_type = NULL,
   q = NULL,
   optimizer = "Newton-CG",
-  scale = 0.5,
+  scale = 1,
+  use_kmeans = TRUE,
   ...
 )
 }
@@ -27,7 +28,9 @@ If NULL, uses default from Python implementation.}
 \item{optimizer}{Optimizer name: "Newton-CG" (default), "grad_descent",
 "rms_prop", or "adam"}
 
-\item{scale}{Initialization scale parameter (default 0.5)}
+\item{scale}{Initialization scale parameter (default 1.0)}
+
+\item{use_kmeans}{Logical, whether to use k-means for initializing component means (default TRUE)}
 
 \item{...}{Additional arguments passed to Python init_params() or fit() methods}
 }

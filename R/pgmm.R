@@ -9,7 +9,8 @@
 #' @param q Number of latent factors (NULL for automatic selection)
 #' @param optimizer Optimizer name: "Newton-CG" (default), "grad_descent", 
 #'   "rms_prop", or "adam"
-#' @param scale Initialization scale parameter (default 0.5)
+#' @param scale Initialization scale parameter (default 1.0)
+#' @param use_kmeans Logical, whether to use k-means for initializing component means (default TRUE)
 #' @param ... Additional arguments passed to Python init_params() or fit() methods
 #'
 #' @details
@@ -28,7 +29,7 @@
 #' mm_bic(fit)
 #' }
 mm_pgmm_fit <- function(x, k, model_type = NULL, q = NULL, 
-                        optimizer = "Newton-CG", scale = 0.5, ...) {
+                        optimizer = "Newton-CG", scale = 1.0, use_kmeans = TRUE, ...) {
   call <- match.call()
   
   # Input validation
@@ -59,7 +60,8 @@ mm_pgmm_fit <- function(x, k, model_type = NULL, q = NULL,
   # Initialize parameters
   init_args <- list(
     num_components = as.integer(k),
-    scale = as.numeric(scale)
+    scale = as.numeric(scale),
+    use_kmeans = use_kmeans
   )
   
   # Add q if provided

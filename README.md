@@ -80,56 +80,172 @@ Sys.setenv(MIXTUREMODELSR_ENVNAME = "my_custom_env")
 mm_setup()
 ```
 
+> **Note:** `mixturemodelsr` uses Python 3.10 and specific package versions internally
+> for compatibility with the Mixture-Models library. The `mm_setup()` function handles
+> this automatically for R users.
+
 ## Quick Start
 
-### Basic GMM Example
+### Basic GMM Example with ARI
+
+```r
+# Install dependencies (once)
+install.packages("mclust")  # for ARI calculation
+
+library(mixturemodelsr)
+library(mclust)
+
+# One-time Python setup (installs Python 3.10 + dependencies)
+mm_setup(force = FALSE)
+
+# Fit a 3-component Gaussian Mixture Model
+fit <- mm_gmm_fit(iris[, 1:4], k = 3)
+
+# Predicted cluster labels
+labels <- mm_predict(fit)
+
+# Adjusted Rand Index (ARI)
+ari <- adjustedRandIndex(labels, iris$Species)
+cat("Adjusted Rand Index:", ari, "\n")
+
+# Information criteria
+cat("BIC:", mm_bic(fit), "\n")
+cat("AIC:", mm_aic(fit), "\n")
+
+# Confusion table
+table(Predicted = labels, True = iris$Species)
+```
+
+### Model Evaluation Workflow (Recommended)
 
 ```r
 library(mixturemodelsr)
+library(mclust)
 
-# Fit a 3-component GMM on iris data
-fit <- mm_gmm_fit(iris[, 1:4], k = 3)
+# Ensure Python environment is ready
+mm_setup()
 
-# View results
+# Fit model with k-means initialization (default)
+fit <- mm_gmm_fit(
+  x = iris[, 1:4],
+  k = 3,
+  optimizer = "Newton-CG",
+  use_kmeans = TRUE  # default, provides better initialization
+)
+
+# Inspect fitted object
 print(fit)
 
-# Get cluster labels
+# Extract cluster assignments
 labels <- mm_predict(fit)
-table(labels, iris$Species)
 
-# Model selection
-mm_bic(fit)
-mm_aic(fit)
+# Compare against true labels using ARI
+ari <- adjustedRandIndex(labels, iris$Species)
+cat(sprintf("Adjusted Rand Index (ARI): %.3f\n", ari))
+
+# Model selection metrics
+bic <- mm_bic(fit)
+aic <- mm_aic(fit)
+cat("BIC:", bic, "\n")
+cat("AIC:", aic, "\n")
+
+# Confusion matrix
+conf_mat <- table(
+  Predicted = labels,
+  True = iris$Species
+)
+print(conf_mat)
 ```
 
 ### Mclust Family Example
 
 ```r
-# Fit Mclust with VVV (most flexible) model
+library(mixturemodelsr)
+library(mclust)
+
+mm_setup()
+
+# Fit Mclust with VVV (most flexible) covariance structure
 fit_vvv <- mm_mclust_fit(iris[, 1:4], k = 3, model_type = "VVV")
 
-# Fit Mclust with EII (spherical, equal volume) model
+# Fit Mclust with EII (spherical, equal volume) structure
 fit_eii <- mm_mclust_fit(iris[, 1:4], k = 3, model_type = "EII")
 
 # Compare models
-mm_bic(fit_vvv)
-mm_bic(fit_eii)
+cat("VVV BIC:", mm_bic(fit_vvv), "\n")
+cat("EII BIC:", mm_bic(fit_eii), "\n")
+
+# Best model
+best_fit <- if(mm_bic(fit_vvv) < mm_bic(fit_eii)) fit_vvv else fit_eii
+labels <- mm_predict(best_fit)
+ari <- adjustedRandIndex(labels, iris$Species)
+cat("ARI:", ari, "\n")
 ```
 
-### MFA Example
+### MFA Example (Mixture of Factor Analyzers)
 
 ```r
-# Mixture of Factor Analyzers with 2 latent factors
+library(mixturemodelsr)
+library(mclust)
+
+mm_setup()
+
+# Fit MFA with 3 components and 2 latent factors
 fit_mfa <- mm_mfa_fit(iris[, 1:4], k = 3, q = 2)
-mm_bic(fit_mfa)
+
+# Evaluate
+labels <- mm_predict(fit_mfa)
+ari <- adjustedRandIndex(labels, iris$Species)
+cat("MFA ARI:", ari, "\n")
+cat("MFA BIC:", mm_bic(fit_mfa), "\n")
+```
+
+### PGMM Example (Parsimonious GMM)
+
+```r
+library(mixturemodelsr)
+library(mclust)
+
+mm_setup()
+
+# Fit PGMM with VVV model type
+fit_pgmm <- mm_pgmm_fit(iris[, 1:4], k = 3, model_type = "VVV")
+
+labels <- mm_predict(fit_pgmm)
+ari <- adjustedRandIndex(labels, iris$Species)
+cat("PGMM ARI:", ari, "\n")
 ```
 
 ### TMM Example (Robust to Outliers)
 
 ```r
+library(mixturemodelsr)
+library(mclust)
+
+mm_setup()
+
 # t-Mixture Model (robust to outliers)
 fit_tmm <- mm_tmm_fit(iris[, 1:4], k = 3)
+
 labels <- mm_predict(fit_tmm)
+ari <- adjustedRandIndex(labels, iris$Species)
+cat("TMM ARI:", ari, "\n")
+```
+
+### GMM_Constrained Example
+
+```r
+library(mixturemodelsr)
+library(mclust)
+
+mm_setup()
+
+# Constrained GMM (common covariance matrix)
+fit_const <- mm_gmm_constrained_fit(iris[, 1:4], k = 3)
+
+labels <- mm_predict(fit_const)
+ari <- adjustedRandIndex(labels, iris$Species)
+cat("Constrained GMM ARI:", ari, "\n")
 ```
 
 ## Optimizers

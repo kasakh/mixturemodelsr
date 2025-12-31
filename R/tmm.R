@@ -7,7 +7,8 @@
 #' @param k Number of mixture components
 #' @param optimizer Optimizer name: "Newton-CG" (default), "grad_descent", 
 #'   "rms_prop", or "adam"
-#' @param scale Initialization scale parameter (default 0.5)
+#' @param scale Initialization scale parameter (default 1.0)
+#' @param use_kmeans Logical, whether to use k-means for initializing component means (default TRUE)
 #' @param ... Additional arguments passed to Python init_params() or fit() methods
 #'
 #' @details
@@ -28,7 +29,7 @@
 #' labels <- mm_predict(fit)
 #' table(labels, iris$Species)
 #' }
-mm_tmm_fit <- function(x, k, optimizer = "Newton-CG", scale = 0.5, ...) {
+mm_tmm_fit <- function(x, k, optimizer = "Newton-CG", scale = 1.0, use_kmeans = TRUE, ...) {
   call <- match.call()
   
   # Input validation
@@ -58,7 +59,8 @@ mm_tmm_fit <- function(x, k, optimizer = "Newton-CG", scale = 0.5, ...) {
   # Initialize parameters
   init_params <- model$init_params(
     num_components = as.integer(k),
-    scale = as.numeric(scale)
+    scale = as.numeric(scale),
+    use_kmeans = use_kmeans
   )
   
   # Fit model
