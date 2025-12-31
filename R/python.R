@@ -66,10 +66,10 @@ mm_require_python <- function(force = FALSE) {
   # Managed venv via py_require (recommended)
   # Use normalized PyPI name "mixture-models" and pin compatible dependencies
   pkgs <- c(
-    "mixture-models==0.0.8",
-    "autograd==1.3",
-    "numpy<2",
-    "scipy<1.12",
+    "git+https://github.com/kasakh/Mixture-Models@ceb192b",
+    "autograd==1.6",
+    "numpy==1.26",
+    "scipy==1.14",
     "scikit-learn<1.4",
     "matplotlib<3.9",
     "future>=0.18.2"
@@ -89,7 +89,7 @@ mm_require_python <- function(force = FALSE) {
     # Safe to fully define the environment before initialization
     reticulate::py_require(
       pkgs,
-      python_version = ">=3.9,<3.12",
+      python_version = "==3.10.*",
       action = "set"
     )
   }
