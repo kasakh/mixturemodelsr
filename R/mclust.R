@@ -66,9 +66,9 @@ mm_mclust_fit <- function(x, k, model_type = NULL, optimizer = "Newton-CG",
   # Convert data to Python
   py_x <- reticulate::r_to_py(x)
   
-  # Create model with or without model_type
+  # Create model with or without model_type (Python uses "constraint" parameter)
   if (!is.null(model_type)) {
-    model <- mm$Mclust(py_x, model_type = model_type)
+    model <- mm$Mclust(py_x, constraint = model_type)
   } else {
     model <- mm$Mclust(py_x)
   }

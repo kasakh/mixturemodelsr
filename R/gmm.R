@@ -133,8 +133,8 @@ mm_gmm_constrained_fit <- function(x, k, optimizer = "Newton-CG", scale = 1.0, u
   # Convert data to Python
   py_x <- reticulate::r_to_py(x)
   
-  # Create model
-  model <- mm$GMM_Constrained(py_x)
+  # Create model (Python class has typo: GMM_Constrainted)
+  model <- mm$GMM_Constrainted(py_x)
   
   # Initialize parameters
   init_params <- model$init_params(

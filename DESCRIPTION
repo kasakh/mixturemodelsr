@@ -1,9 +1,9 @@
 Package: mixturemodelsr
 Type: Package
 Title: R Wrapper for the Mixture-Models Python Library
-Version: 0.1.9
+Version: 0.1.10
 Authors@R: 
-    person("Siva Rajesh", "Kasa", email = "sivarajesh.kasa@gmail.com", 
+    person("Siva Rajesh", "Kasa", email = "mixturemodelscollab@gmail.com", 
            role = c("aut", "cre", "cph"))
 Description: Provides an R interface to the 'Mixture-Models' Python package 
     (Kasa et al., 2024) via reticulate. Supports fitting Gaussian Mixture Models (GMM),
