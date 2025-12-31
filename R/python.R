@@ -57,10 +57,19 @@ mm_python_available <- function() {
 #' @keywords internal
 mm_setup_conda <- function(force = FALSE) {
   # Ensure Miniconda exists (reticulate installs Miniforge/Miniconda)
-  if (!reticulate::miniconda_exists()) {
+  # if (!reticulate::miniconda_exists()) {
+  #   message("Miniconda not found. Installing (one-time)...")
+  #   reticulate::install_miniconda()
+  # }
+
+  mini_path <- tryCatch(reticulate::miniconda_path(), error = function(e) NA_character_)
+  if (is.na(mini_path) || !nzchar(mini_path) || !dir.exists(mini_path)) {
     message("Miniconda not found. Installing (one-time)...")
     reticulate::install_miniconda()
+    mini_path <- reticulate::miniconda_path()
   }
+  # Make sure reticulate can find the conda binary this session
+  reticulate::use_miniconda()
 
   envname <- mm_envname()
 
