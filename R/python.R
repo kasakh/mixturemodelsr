@@ -42,7 +42,9 @@ mm_use_env <- function(required = FALSE) {
 #' @export
 mm_python_available <- function() {
   mm_use_env(required = FALSE)
-  reticulate::py_module_available("mixture_models")
+  # PyPI installs as Mixture_Models, but import can be mixture_models or Mixture_Models
+  reticulate::py_module_available("mixture_models") ||
+    reticulate::py_module_available("Mixture_Models")
 }
 
 #' Provision Python environment with required packages
@@ -134,12 +136,18 @@ mm_setup <- function(force = FALSE) {
 
   mm_require_python(force = force)
 
-  if (!reticulate::py_module_available("mixture_models")) {
+  # Check for either module name
+  if (!mm_python_available()) {
     # Distinguish "not installed" vs "installed but import error"
     err <- tryCatch({
       reticulate::py_run_string("import mixture_models")
       NULL
-    }, error = function(e) reticulate::py_last_error())
+    }, error = function(e) {
+      tryCatch({
+        reticulate::py_run_string("import Mixture_Models")
+        NULL
+      }, error = function(e2) reticulate::py_last_error())
+    })
 
     if (!is.null(err)) {
       stop(
@@ -169,9 +177,14 @@ mm_setup <- function(force = FALSE) {
 mm_import <- function() {
   mm_require_python(force = FALSE)
 
-  if (!reticulate::py_module_available("mixture_models")) {
+  # Try both module names (PyPI installs as Mixture_Models)
+  if (reticulate::py_module_available("mixture_models")) {
+    return(reticulate::import("mixture_models", delay_load = FALSE, convert = FALSE))
+  } else if (reticulate::py_module_available("Mixture_Models")) {
+    return(reticulate::import("Mixture_Models", delay_load = FALSE, convert = FALSE))
+  } else {
     stop(
-      "Python module 'mixture_models' is not available.\n",
+      "Python module 'mixture_models' (or 'Mixture_Models') is not available.\n",
       "Please run mm_setup() to install the required Python packages.\n",
       "\nAlternatively, if you have your own Python environment:\n",
       "  1. Install: pip install mixture-models==0.0.8\n",
@@ -179,6 +192,4 @@ mm_import <- function() {
       call. = FALSE
     )
   }
-
-  reticulate::import("mixture_models", delay_load = FALSE, convert = FALSE)
 }
