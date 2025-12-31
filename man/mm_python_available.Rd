@@ -7,7 +7,7 @@
 mm_python_available()
 }
 \value{
-Logical indicating if mixture_models Python package is available
+Logical indicating if either mixture_models or Mixture_Models is importable
 }
 \description{
 Check if Python module is available

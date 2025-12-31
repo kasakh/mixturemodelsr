@@ -2,7 +2,7 @@
 % Please edit documentation in R/python.R
 \name{mm_use_env}
 \alias{mm_use_env}
-\title{Use configured Python environment}
+\title{Use configured Python environment (if already available)}
 \usage{
 mm_use_env(required = FALSE)
 }
@@ -10,6 +10,6 @@ mm_use_env(required = FALSE)
 \item{required}{Logical, whether to require Python availability}
 }
 \description{
-Use configured Python environment
+Use configured Python environment (if already available)
 }
 \keyword{internal}

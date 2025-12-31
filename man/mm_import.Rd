@@ -2,11 +2,11 @@
 % Please edit documentation in R/python.R
 \name{mm_import}
 \alias{mm_import}
-\title{Import mixture_models Python module}
+\title{Import Python module (supports both upstream names)}
 \usage{
 mm_import()
 }
 \description{
-Import mixture_models Python module
+Import Python module (supports both upstream names)
 }
 \keyword{internal}

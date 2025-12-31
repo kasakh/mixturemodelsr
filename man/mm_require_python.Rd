@@ -2,14 +2,14 @@
 % Please edit documentation in R/python.R
 \name{mm_require_python}
 \alias{mm_require_python}
-\title{Provision Python environment with required packages}
+\title{Ensure Python is configured for this session}
 \usage{
 mm_require_python(force = FALSE)
 }
 \arguments{
-\item{force}{Logical, force re-provisioning}
+\item{force}{Logical, force re-provisioning if using conda env}
 }
 \description{
-Provision Python environment with required packages
+Ensure Python is configured for this session
 }
 \keyword{internal}
