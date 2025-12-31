@@ -4,7 +4,7 @@ R interface to the [Mixture-Models](https://github.com/kasakh/Mixture-Models) Py
 
 ## Overview
 
-`mixturemodelsr` provides R wrappers around the Python Mixture-Models library, which implements various mixture model families with gradient-based optimization including Newton-CG. Unlike traditional EM-based approaches, this package uses automatic differentiation for efficient parameter estimation, making it suitable for high-dimensional data.
+**`mixturemodelsr` is the first R package enabling mixture models for high-dimensional data** through gradient-based optimization with Automatic Differentiation (AD). It provides R wrappers around the Python Mixture-Models library, implementing various mixture model families with advanced optimizers including second-order Newton-CG.
 
 ### Supported Model Families
 
@@ -18,11 +18,52 @@ R interface to the [Mixture-Models](https://github.com/kasakh/Mixture-Models) Py
 
 ### Key Features
 
+- **First R package for high-dimensional mixture models**: Overcomes EM limitations using Automatic Differentiation (AD)
 - **Gradient-based optimization**: Newton-CG, Adam, RMSProp, SGD with momentum
-- **Automatic differentiation**: Efficient computation of gradients and Hessians
+- **No stringent constraints needed**: Suitable for settings where parameters ≥ sample size
+- **Automatic Differentiation (AD)**: Efficient automatic computation of gradients and Hessians
+- **Second-order optimization**: Newton-CG unavailable in traditional EM packages
 - **Model selection**: AIC, BIC, and likelihood functions
 - **Easy installation**: Automatic Python environment management
 - **R-friendly API**: Familiar R syntax and data structures
+
+## Why mixturemodelsr?
+
+### High-Dimensional Data Support
+
+Traditional EM-based R packages (mclust, flexmix) struggle with high-dimensional data where the number of free parameters approaches or exceeds the sample size. **mixturemodelsr overcomes these limitations** through:
+
+1. **Automatic Differentiation (AD)**: Uses AD tools to automatically compute gradients and Hessians, enabling gradient-based optimization without manual derivations
+
+2. **No rank deficiency issues**: Unlike EM (where covariance estimates become rank-deficient in high dimensions), gradient-based approaches with proper reparametrization avoid this problem
+
+3. **Minimal constraints**: Fit flexible models without stringent pre-determined constraints on means or covariances, allowing data-driven discovery of cluster structure
+
+4. **Second-order optimization**: Newton-CG provides faster convergence than EM's first-order updates
+
+### Comparison with EM-Based Packages
+
+| Feature | mixturemodelsr | mclust/flexmix (EM) |
+|---------|----------------|---------------------|
+| **High-dimensional data** | ✅ Yes (p ≥ n supported) | ❌ No (requires constraints) |
+| **Optimization** | Gradient-based + Newton-CG | EM (first-order only) |
+| **Automatic Differentiation** | ✅ Yes (AD via autograd) | ❌ No (hard-coded updates) |
+| **Flexible models** | ✅ Minimal constraints needed | ⚠️ Stringent constraints required for p ≥ n |
+| **Convergence** | Fast (second-order) | Slower (first-order) |
+| **Extensibility** | Easy (AD handles new models) | Difficult (manual derivations) |
+
+### When to Use mixturemodelsr
+
+- **High-dimensional data**: When p (features) approaches or exceeds n (samples)
+- **Flexible modeling**: When you want data-driven cluster discovery without hard constraints
+- **Fast convergence**: When second-order optimization matters
+- **Research**: When experimenting with new mixture model variants
+
+### When Traditional EM Packages Are Fine
+
+- **Low-dimensional data**: When p << n and simple models suffice
+- **Established workflows**: When existing EM-based code works well
+- **R-only environments**: When Python dependencies are not acceptable
 
 ## Installation
 

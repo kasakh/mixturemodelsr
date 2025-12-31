@@ -1,18 +1,21 @@
 Package: mixturemodelsr
 Type: Package
 Title: R Wrapper for the Mixture-Models Python Library
-Version: 0.1.10
+Version: 0.1.11
 Authors@R: 
     person("Siva Rajesh", "Kasa", email = "mixturemodelscollab@gmail.com", 
            role = c("aut", "cre", "cph"))
-Description: Provides an R interface to the 'Mixture-Models' Python package 
-    (Kasa et al., 2024) via reticulate. Supports fitting Gaussian Mixture Models (GMM),
-    Mixture of Factor Analyzers (MFA), Parsimonious GMM (PGMM), MCLUST family,
-    and t-mixture models using gradient-based optimization including Newton-CG.
-    The Python library uses automatic differentiation for efficient parameter estimation.
-    Reference: Kasa, S. R., Yijie, H., Kasa, S. K., & Rajan, V. (2024). 
-    Mixture-Models: a one-stop Python Library for Model-based Clustering using various 
-    Mixture Models. arXiv preprint arXiv:2402.10229.
+Description: First R package enabling mixture models for high-dimensional data through 
+    gradient-based optimization with Automatic Differentiation (AD). Provides an R interface 
+    to the 'Mixture-Models' Python package (Kasa et al., 2024) via reticulate. Unlike 
+    traditional EM-based approaches (e.g., mclust, flexmix), this package uses AD and 
+    gradient-based optimization (including second-order Newton-CG) to fit Gaussian Mixture 
+    Models (GMM), Mixture of Factor Analyzers (MFA), Parsimonious GMM (PGMM), MCLUST family, 
+    and t-mixture models without requiring stringent modeling constraints, making it suitable 
+    for high-dimensional settings where the number of parameters exceeds the sample size. 
+    Reference: Kasa, S. R., Yijie, H., Kasa, S. K., & Rajan, V. (2024). Mixture-Models: 
+    a one-stop Python Library for Model-based Clustering using various Mixture Models. 
+    arXiv preprint arXiv:2402.10229.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
