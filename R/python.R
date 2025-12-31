@@ -197,8 +197,38 @@ mm_setup <- function(force = FALSE, ...) {
     )
   }
   
+  # Check for explicit Python path override
+  if (nzchar(Sys.getenv("MIXTUREMODELSR_PYTHON", unset = ""))) {
+    message("MIXTUREMODELSR_PYTHON is set. Please install Mixture-Models manually:")
+    message("  pip install Mixture-Models==0.0.8")
+    return(invisible(FALSE))
+  }
+  
   message("Setting up mixturemodelsr Python dependencies...")
-  mm_install(...)
+  
+  # Step 1: Ensure Miniconda exists (auto-install for R-only users)
+  if (!reticulate::miniconda_exists()) {
+    message("\nMiniconda not found. Installing Miniconda (one-time setup)...")
+    message("This may take a few minutes...")
+    tryCatch({
+      reticulate::install_miniconda()
+      message("✓ Miniconda installed successfully")
+    }, error = function(e) {
+      stop(
+        "Failed to install Miniconda automatically.\n",
+        "Error: ", conditionMessage(e), "\n\n",
+        "Alternative options:\n",
+        "1. Install Python/Conda manually, then set MIXTUREMODELSR_PYTHON\n",
+        "2. Contact package maintainer for support",
+        call. = FALSE
+      )
+    })
+  } else {
+    message("✓ Miniconda found")
+  }
+  
+  # Step 2: Install Python packages
+  mm_install(method = "conda", ...)
 }
 
 #' Import mixture_models Python module
