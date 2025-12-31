@@ -7,7 +7,7 @@
 mm_setup(force = FALSE)
 }
 \arguments{
-\item{force}{Logical, force reinstallation even if already installed}
+\item{force}{Logical, force re-provisioning (requires restart if Python already initialized)}
 }
 \value{
 TRUE invisibly on success

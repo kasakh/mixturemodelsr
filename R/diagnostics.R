@@ -84,7 +84,7 @@ mm_py_info <- function() {
   # Full py_config
   cat("## Full Python Configuration:\n")
   tryCatch({
-    print(reticulate::py_config())
+    cat(paste(capture.output(reticulate::py_config()), collapse = "\n"), "\n")
   }, error = function(e) {
     cat("  Unable to retrieve Python configuration\n")
   })

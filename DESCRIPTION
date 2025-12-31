@@ -1,15 +1,18 @@
 Package: mixturemodelsr
 Type: Package
 Title: R Wrapper for the Mixture-Models Python Library
-Version: 0.1.1
+Version: 0.1.3
 Authors@R: 
     person("Siva Rajesh", "Kasa", email = "sivarajesh.kasa@gmail.com", 
            role = c("aut", "cre", "cph"))
 Description: Provides an R interface to the 'Mixture-Models' Python package 
-    (Kasa & Rajan, 2020) via reticulate. Supports fitting Gaussian Mixture Models (GMM),
+    (Kasa et al., 2024) via reticulate. Supports fitting Gaussian Mixture Models (GMM),
     Mixture of Factor Analyzers (MFA), Parsimonious GMM (PGMM), MCLUST family,
     and t-mixture models using gradient-based optimization including Newton-CG.
     The Python library uses automatic differentiation for efficient parameter estimation.
+    Reference: Kasa, S. R., Yijie, H., Kasa, S. K., & Rajan, V. (2024). 
+    Mixture-Models: a one-stop Python Library for Model-based Clustering using various 
+    Mixture Models. arXiv preprint arXiv:2402.10229.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
@@ -21,9 +24,9 @@ Suggests:
     testthat (>= 3.0.0),
     knitr,
     rmarkdown
-SystemRequirements: Python (>= 3.6), Python package 'Mixture-Models' (available on PyPI)
-URL: https://github.com/kasakh/Mixture-Models
-BugReports: https://github.com/kasakh/Mixture-Models/issues
+SystemRequirements: Python (>= 3.6), Python package 'mixture-models' (available on PyPI)
+URL: https://github.com/kasakh/mixturemodelsr, https://github.com/kasakh/Mixture-Models
+BugReports: https://github.com/kasakh/mixturemodelsr/issues
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 VignetteBuilder: knitr

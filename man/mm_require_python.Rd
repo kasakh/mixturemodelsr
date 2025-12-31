@@ -4,7 +4,10 @@
 \alias{mm_require_python}
 \title{Provision Python environment with required packages}
 \usage{
-mm_require_python()
+mm_require_python(force = FALSE)
+}
+\arguments{
+\item{force}{Logical, force re-provisioning}
 }
 \description{
 Provision Python environment with required packages

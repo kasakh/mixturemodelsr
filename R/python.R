@@ -46,35 +46,56 @@ mm_python_available <- function() {
 }
 
 #' Provision Python environment with required packages
+#' @param force Logical, force re-provisioning
 #' @keywords internal
-mm_require_python <- function() {
-  # If user has set MIXTUREMODELSR_PYTHON, honor it
+mm_require_python <- function(force = FALSE) {
+  # If user explicitly sets a Python, honor it and do NOT provision
   py_path <- Sys.getenv("MIXTUREMODELSR_PYTHON", unset = "")
   if (nzchar(py_path)) {
     reticulate::use_python(py_path, required = TRUE)
     return(invisible(TRUE))
   }
 
-  # If conda env exists, prefer it (for users who already set it up)
+  # If user already has conda + env, allow it (optional)
   envname <- mm_envname()
   if (mm_has_conda() && reticulate::condaenv_exists(envname)) {
     reticulate::use_condaenv(envname, required = TRUE)
     return(invisible(TRUE))
   }
 
-  # Otherwise, provision with py_require() (no conda needed - modern reticulate approach)
-  message("Provisioning Python environment with py_require()...")
-  reticulate::py_require(c(
-    "Mixture-Models==0.0.8",
-    "autograd",
-    "numpy",
-    "scipy",
-    "scikit-learn",
-    "matplotlib",
-    "future"
-  ))
-  
-  # Force resolution now so errors happen here, not later
+  # Managed venv via py_require (recommended)
+  # Use normalized PyPI name "mixture-models" and pin compatible dependencies
+  pkgs <- c(
+    "mixture-models==0.0.8",
+    "autograd==1.3",
+    "numpy<2",
+    "scipy<1.12",
+    "scikit-learn<1.4",
+    "matplotlib<3.9",
+    "future>=0.18.2"
+  )
+
+  # If Python has already been initialized, we can only add packages
+  if (reticulate::py_available(initialize = FALSE)) {
+    if (force) {
+      stop(
+        "Cannot force a fresh managed Python environment after Python has initialized.\n",
+        "Please restart R, then run mm_setup(force = TRUE) again.",
+        call. = FALSE
+      )
+    }
+    reticulate::py_require(pkgs, action = "add")
+  } else {
+    # Safe to fully define the environment before initialization
+    reticulate::py_require(
+      pkgs,
+      python_version = ">=3.9,<3.12",
+      exclude_newer = "2024-01-01",
+      action = "set"
+    )
+  }
+
+  # Force initialization now so errors occur here
   reticulate::py_config()
   invisible(TRUE)
 }
@@ -85,7 +106,7 @@ mm_require_python <- function() {
 #' installs them if needed. This is the recommended way for users to set up
 #' the package. Uses reticulate's py_require() for automatic Python provisioning.
 #'
-#' @param force Logical, force reinstallation even if already installed
+#' @param force Logical, force re-provisioning (requires restart if Python already initialized)
 #'
 #' @return TRUE invisibly on success
 #' @export
@@ -112,11 +133,27 @@ mm_setup <- function(force = FALSE) {
 
   message("Setting up mixturemodelsr Python dependencies...")
 
-  # This will either use MIXTUREMODELSR_PYTHON, use an existing conda env,
-  # or provision an environment via py_require() (modern reticulate approach)
-  mm_require_python()
+  mm_require_python(force = force)
 
-  if (!mm_python_available()) {
+  if (!reticulate::py_module_available("mixture_models")) {
+    # Distinguish "not installed" vs "installed but import error"
+    err <- tryCatch({
+      reticulate::py_run_string("import mixture_models")
+      NULL
+    }, error = function(e) reticulate::py_last_error())
+
+    if (!is.null(err)) {
+      stop(
+        "Python module 'mixture_models' is still not available.\n\n",
+        "Python error:\n",
+        paste0(capture.output(print(err)), collapse = "\n"),
+        "\n\nTry:\n",
+        "1) Restart R\n",
+        "2) Run mm_setup(force = TRUE)\n",
+        call. = FALSE
+      )
+    }
+
     stop(
       "Setup ran but 'mixture_models' is still not available.\n",
       "Run mm_py_info() for diagnostics.",
@@ -131,14 +168,14 @@ mm_setup <- function(force = FALSE) {
 #' Import mixture_models Python module
 #' @keywords internal
 mm_import <- function() {
-  mm_require_python()
+  mm_require_python(force = FALSE)
 
   if (!reticulate::py_module_available("mixture_models")) {
     stop(
       "Python module 'mixture_models' is not available.\n",
       "Please run mm_setup() to install the required Python packages.\n",
       "\nAlternatively, if you have your own Python environment:\n",
-      "  1. Install: pip install Mixture-Models==0.0.8\n",
+      "  1. Install: pip install mixture-models==0.0.8\n",
       "  2. Set: Sys.setenv(MIXTUREMODELSR_PYTHON = '/path/to/python')",
       call. = FALSE
     )
