@@ -15,11 +15,11 @@ TRUE invisibly on success
 \description{
 Convenience function that checks if Python dependencies are installed and
 installs them if needed. This is the recommended way for users to set up
-the package. Automatically installs Miniconda if not present.
+the package. Uses reticulate's py_require() for automatic Python provisioning.
 }
 \examples{
 \dontrun{
 library(mixturemodelsr)
-mm_setup()  # One-time setup, auto-installs Miniconda if needed
+mm_setup()  # One-time setup, auto-provisions Python environment
 }
 }

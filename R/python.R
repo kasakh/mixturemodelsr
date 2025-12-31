@@ -4,23 +4,36 @@ mm_envname <- function() {
   Sys.getenv("MIXTUREMODELSR_ENVNAME", unset = "mixturemodelsr")
 }
 
+#' Check if conda is available (safely)
+#' @keywords internal
+mm_has_conda <- function() {
+  # conda_binary() throws if conda is not installed, doesn't return ""
+  ok <- tryCatch({
+    bin <- reticulate::conda_binary()
+    is.character(bin) && nzchar(bin)
+  }, error = function(e) FALSE)
+  ok
+}
+
 #' Use configured Python environment
 #' @param required Logical, whether to require Python availability
 #' @keywords internal
 mm_use_env <- function(required = FALSE) {
-  # Check for explicit Python path override
+  # 1) Explicit python override wins
   py_path <- Sys.getenv("MIXTUREMODELSR_PYTHON", unset = "")
   if (nzchar(py_path)) {
     reticulate::use_python(py_path, required = required)
     return(invisible(TRUE))
   }
-  
-  # Otherwise use managed conda env
+
+  # 2) If conda exists and env exists, use it
   envname <- mm_envname()
-  if (reticulate::conda_binary() != "" && reticulate::condaenv_exists(envname)) {
+  if (mm_has_conda() && reticulate::condaenv_exists(envname)) {
     reticulate::use_condaenv(envname, required = required)
+    return(invisible(TRUE))
   }
-  
+
+  # 3) Otherwise: do nothing here (mm_setup() will provision via py_require())
   invisible(TRUE)
 }
 
@@ -32,65 +45,37 @@ mm_python_available <- function() {
   reticulate::py_module_available("mixture_models")
 }
 
-#' Install Python dependencies for mixturemodelsr
-#'
-#' Creates a dedicated conda environment and installs the Mixture-Models Python
-#' package along with its dependencies. This is typically called by mm_setup().
-#'
-#' @param envname Name of the environment (default uses MIXTUREMODELSR_ENVNAME 
-#'   or "mixturemodelsr")
-#'
-#' @details
-#' This function assumes Miniconda is already installed and activated.
-#' It creates a conda environment and installs Mixture-Models==0.0.8.
-#'
-#' @return TRUE invisibly on success
+#' Provision Python environment with required packages
 #' @keywords internal
-mm_install <- function(envname = mm_envname()) {
-  
-  # Check for explicit Python path override
-  if (nzchar(Sys.getenv("MIXTUREMODELSR_PYTHON", unset = ""))) {
-    message("MIXTUREMODELSR_PYTHON is set. Please install Mixture-Models manually:")
-    message("  pip install Mixture-Models==0.0.8")
-    return(invisible(FALSE))
+mm_require_python <- function() {
+  # If user has set MIXTUREMODELSR_PYTHON, honor it
+  py_path <- Sys.getenv("MIXTUREMODELSR_PYTHON", unset = "")
+  if (nzchar(py_path)) {
+    reticulate::use_python(py_path, required = TRUE)
+    return(invisible(TRUE))
   }
-  
-  # Get requirements file
-  req_file <- system.file("python/requirements.txt", package = "mixturemodelsr")
-  if (!file.exists(req_file) || req_file == "") {
-    stop("requirements.txt not found in package installation.", call. = FALSE)
+
+  # If conda env exists, prefer it (for users who already set it up)
+  envname <- mm_envname()
+  if (mm_has_conda() && reticulate::condaenv_exists(envname)) {
+    reticulate::use_condaenv(envname, required = TRUE)
+    return(invisible(TRUE))
   }
+
+  # Otherwise, provision with py_require() (no conda needed - modern reticulate approach)
+  message("Provisioning Python environment with py_require()...")
+  reticulate::py_require(c(
+    "Mixture-Models==0.0.8",
+    "autograd",
+    "numpy",
+    "scipy",
+    "scikit-learn",
+    "matplotlib",
+    "future"
+  ))
   
-  # Ensure Miniconda is activated
-  reticulate::use_miniconda()
-  
-  # Create environment if it doesn't exist
-  if (!reticulate::condaenv_exists(envname)) {
-    message("Creating conda environment: ", envname)
-    reticulate::conda_create(envname)
-  }
-  
-  # Activate the environment
-  message("Activating conda environment: ", envname)
-  reticulate::use_condaenv(envname, required = TRUE)
-  
-  # Install Python packages
-  message("Installing Mixture-Models and dependencies...")
-  reticulate::py_install(
-    packages = paste0("-r ", req_file),
-    pip = TRUE
-  )
-  
-  message("\n✓ Installation complete!")
-  
-  if (mm_python_available()) {
-    message("✓ Mixture-Models package is available")
-    message("\nYou can now use functions like mm_gmm_fit(), mm_mfa_fit(), etc.")
-    message("Note: Restarting R session is recommended for changes to take full effect.")
-  } else {
-    warning("Installation completed but package verification failed. Try restarting R.")
-  }
-  
+  # Force resolution now so errors happen here, not later
+  reticulate::py_config()
   invisible(TRUE)
 }
 
@@ -98,7 +83,7 @@ mm_install <- function(envname = mm_envname()) {
 #'
 #' Convenience function that checks if Python dependencies are installed and
 #' installs them if needed. This is the recommended way for users to set up
-#' the package. Automatically installs Miniconda if not present.
+#' the package. Uses reticulate's py_require() for automatic Python provisioning.
 #'
 #' @param force Logical, force reinstallation even if already installed
 #'
@@ -108,16 +93,9 @@ mm_install <- function(envname = mm_envname()) {
 #' @examples
 #' \dontrun{
 #' library(mixturemodelsr)
-#' mm_setup()  # One-time setup, auto-installs Miniconda if needed
+#' mm_setup()  # One-time setup, auto-provisions Python environment
 #' }
 mm_setup <- function(force = FALSE) {
-  # Step 0: Check if already set up
-  if (!force && mm_python_available()) {
-    message("✓ Mixture-Models Python package is already installed and available")
-    message("  Use force = TRUE to reinstall")
-    return(invisible(TRUE))
-  }
-  
   if (!interactive()) {
     stop(
       "mm_setup() requires an interactive R session.\n",
@@ -125,53 +103,36 @@ mm_setup <- function(force = FALSE) {
       call. = FALSE
     )
   }
-  
-  # Step 1: Check for user-specified Python override
-  if (nzchar(Sys.getenv("MIXTUREMODELSR_PYTHON", unset = ""))) {
-    message("MIXTUREMODELSR_PYTHON is set.")
-    message("Please ensure Mixture-Models==0.0.8 is installed in that environment:")
-    message("  pip install Mixture-Models==0.0.8")
-    return(invisible(FALSE))
+
+  if (!force && mm_python_available()) {
+    message("✓ Mixture-Models Python package is already installed and available")
+    message("  Use force = TRUE to reinstall")
+    return(invisible(TRUE))
   }
-  
+
   message("Setting up mixturemodelsr Python dependencies...")
-  
-  # Step 2: Ensure Miniconda exists (auto-install for R-only users)
-  if (!reticulate::miniconda_exists()) {
-    message("\nMiniconda not found. Installing Miniconda (one-time setup)...")
-    message("This may take a few minutes...")
-    tryCatch({
-      reticulate::install_miniconda()
-      message("✓ Miniconda installed successfully")
-    }, error = function(e) {
-      stop(
-        "Failed to install Miniconda automatically.\n",
-        "Error: ", conditionMessage(e), "\n\n",
-        "Alternative options:\n",
-        "1. Install Python/Conda manually, then set MIXTUREMODELSR_PYTHON\n",
-        "2. Contact package maintainer for support",
-        call. = FALSE
-      )
-    })
-  } else {
-    message("✓ Miniconda found")
+
+  # This will either use MIXTUREMODELSR_PYTHON, use an existing conda env,
+  # or provision an environment via py_require() (modern reticulate approach)
+  mm_require_python()
+
+  if (!mm_python_available()) {
+    stop(
+      "Setup ran but 'mixture_models' is still not available.\n",
+      "Run mm_py_info() for diagnostics.",
+      call. = FALSE
+    )
   }
-  
-  # Step 3: Explicitly activate Miniconda in this session
-  message("Activating Miniconda...")
-  reticulate::use_miniconda()
-  
-  # Step 4: Install Python packages
-  mm_install()
-  
+
+  message("✓ Setup complete. You can now fit models (e.g., mm_gmm_fit()).")
   invisible(TRUE)
 }
 
 #' Import mixture_models Python module
 #' @keywords internal
 mm_import <- function() {
-  mm_use_env(required = FALSE)
-  
+  mm_require_python()
+
   if (!reticulate::py_module_available("mixture_models")) {
     stop(
       "Python module 'mixture_models' is not available.\n",
@@ -182,6 +143,6 @@ mm_import <- function() {
       call. = FALSE
     )
   }
-  
+
   reticulate::import("mixture_models", delay_load = FALSE, convert = FALSE)
 }
