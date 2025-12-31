@@ -4,53 +4,21 @@
 \alias{mm_install}
 \title{Install Python dependencies for mixturemodelsr}
 \usage{
-mm_install(
-  method = c("auto", "virtualenv", "conda"),
-  envname = mm_envname(),
-  python_version = "3.9",
-  restart_session = TRUE
-)
+mm_install(envname = mm_envname())
 }
 \arguments{
-\item{method}{Installation method: "auto" (default), "virtualenv", or "conda"}
-
 \item{envname}{Name of the environment (default uses MIXTUREMODELSR_ENVNAME
 or "mixturemodelsr")}
-
-\item{python_version}{Python version to use (default "3.9")}
-
-\item{restart_session}{Logical, whether to restart R session after installation}
 }
 \value{
 TRUE invisibly on success
 }
 \description{
 Creates a dedicated conda environment and installs the Mixture-Models Python
-package along with its dependencies. This function should be called once
-before using the package for the first time.
+package along with its dependencies. This is typically called by mm_setup().
 }
 \details{
-By default, this function creates a conda environment named "mixturemodelsr"
-and installs Mixture-Models==0.0.8 with pinned dependencies.
-
-You can customize the environment name by setting the MIXTUREMODELSR_ENVNAME
-environment variable before calling this function.
-
-Alternatively, you can install the Python package manually in your preferred
-Python environment and set MIXTUREMODELSR_PYTHON to point to that Python
-executable.
+This function assumes Miniconda is already installed and activated.
+It creates a conda environment and installs Mixture-Models==0.0.8.
 }
-\examples{
-\dontrun{
-# Standard installation
-mm_install()
-
-# Custom environment name
-Sys.setenv(MIXTUREMODELSR_ENVNAME = "my_mm_env")
-mm_install()
-
-# Use existing Python with manual install
-Sys.setenv(MIXTUREMODELSR_PYTHON = "/path/to/python")
-# Then manually: pip install Mixture-Models==0.0.8
-}
-}
+\keyword{internal}

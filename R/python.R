@@ -35,50 +35,20 @@ mm_python_available <- function() {
 #' Install Python dependencies for mixturemodelsr
 #'
 #' Creates a dedicated conda environment and installs the Mixture-Models Python
-#' package along with its dependencies. This function should be called once
-#' before using the package for the first time.
+#' package along with its dependencies. This is typically called by mm_setup().
 #'
-#' @param method Installation method: "auto" (default), "virtualenv", or "conda"
 #' @param envname Name of the environment (default uses MIXTUREMODELSR_ENVNAME 
 #'   or "mixturemodelsr")
-#' @param python_version Python version to use (default "3.9")
-#' @param restart_session Logical, whether to restart R session after installation
 #'
 #' @details
-#' By default, this function creates a conda environment named "mixturemodelsr"
-#' and installs Mixture-Models==0.0.8 with pinned dependencies.
-#' 
-#' You can customize the environment name by setting the MIXTUREMODELSR_ENVNAME
-#' environment variable before calling this function.
-#' 
-#' Alternatively, you can install the Python package manually in your preferred
-#' Python environment and set MIXTUREMODELSR_PYTHON to point to that Python
-#' executable.
+#' This function assumes Miniconda is already installed and activated.
+#' It creates a conda environment and installs Mixture-Models==0.0.8.
 #'
 #' @return TRUE invisibly on success
-#' @export
-#'
-#' @examples
-#' \dontrun{
-#' # Standard installation
-#' mm_install()
-#' 
-#' # Custom environment name
-#' Sys.setenv(MIXTUREMODELSR_ENVNAME = "my_mm_env")
-#' mm_install()
-#' 
-#' # Use existing Python with manual install
-#' Sys.setenv(MIXTUREMODELSR_PYTHON = "/path/to/python")
-#' # Then manually: pip install Mixture-Models==0.0.8
-#' }
-mm_install <- function(method = c("auto", "virtualenv", "conda"),
-                       envname = mm_envname(),
-                       python_version = "3.9",
-                       restart_session = TRUE) {
+#' @keywords internal
+mm_install <- function(envname = mm_envname()) {
   
-  method <- match.arg(method)
-  
-  # Check for explicit Python path - if set, user manages their own env
+  # Check for explicit Python path override
   if (nzchar(Sys.getenv("MIXTUREMODELSR_PYTHON", unset = ""))) {
     message("MIXTUREMODELSR_PYTHON is set. Please install Mixture-Models manually:")
     message("  pip install Mixture-Models==0.0.8")
@@ -91,73 +61,32 @@ mm_install <- function(method = c("auto", "virtualenv", "conda"),
     stop("requirements.txt not found in package installation.", call. = FALSE)
   }
   
-  message("Installing Python package 'Mixture-Models' in environment: ", envname)
+  # Ensure Miniconda is activated
+  reticulate::use_miniconda()
   
-  # Determine method
-  if (method == "auto") {
-    method <- if (reticulate::conda_binary() != "") "conda" else "virtualenv"
+  # Create environment if it doesn't exist
+  if (!reticulate::condaenv_exists(envname)) {
+    message("Creating conda environment: ", envname)
+    reticulate::conda_create(envname)
   }
   
-  if (method == "conda") {
-    # Ensure miniconda is installed
-    if (reticulate::conda_binary() == "") {
-      message("Installing Miniconda...")
-      reticulate::install_miniconda()
-    }
-    
-    # Create environment if it doesn't exist
-    if (!reticulate::condaenv_exists(envname)) {
-      message("Creating conda environment: ", envname)
-      reticulate::conda_create(envname, python_version = python_version)
-    }
-    
-    # Install packages
-    message("Installing Python packages...")
-    reticulate::conda_install(
-      envname = envname,
-      packages = "pip",
-      pip = FALSE
-    )
-    
-    # Use the environment
-    reticulate::use_condaenv(envname, required = TRUE)
-    
-    # Install via pip for better version control
-    reticulate::py_install(
-      packages = paste0("-r ", req_file),
-      envname = envname,
-      method = "conda",
-      pip = TRUE
-    )
-    
-  } else if (method == "virtualenv") {
-    # Create virtualenv if it doesn't exist
-    if (!reticulate::virtualenv_exists(envname)) {
-      message("Creating virtualenv: ", envname)
-      reticulate::virtualenv_create(envname, python = python_version)
-    }
-    
-    # Install packages
-    message("Installing Python packages...")
-    reticulate::virtualenv_install(
-      envname = envname,
-      packages = paste0("-r ", req_file),
-      pip = TRUE
-    )
-    
-    reticulate::use_virtualenv(envname, required = TRUE)
-  }
+  # Activate the environment
+  message("Activating conda environment: ", envname)
+  reticulate::use_condaenv(envname, required = TRUE)
+  
+  # Install Python packages
+  message("Installing Mixture-Models and dependencies...")
+  reticulate::py_install(
+    packages = paste0("-r ", req_file),
+    pip = TRUE
+  )
   
   message("\n✓ Installation complete!")
-  message("\nVerifying installation...")
   
   if (mm_python_available()) {
     message("✓ Mixture-Models package is available")
     message("\nYou can now use functions like mm_gmm_fit(), mm_mfa_fit(), etc.")
-    
-    if (restart_session) {
-      message("\nRestarting R session is recommended for changes to take effect.")
-    }
+    message("Note: Restarting R session is recommended for changes to take full effect.")
   } else {
     warning("Installation completed but package verification failed. Try restarting R.")
   }
@@ -169,10 +98,9 @@ mm_install <- function(method = c("auto", "virtualenv", "conda"),
 #'
 #' Convenience function that checks if Python dependencies are installed and
 #' installs them if needed. This is the recommended way for users to set up
-#' the package.
+#' the package. Automatically installs Miniconda if not present.
 #'
 #' @param force Logical, force reinstallation even if already installed
-#' @param ... Additional arguments passed to \code{\link{mm_install}}
 #'
 #' @return TRUE invisibly on success
 #' @export
@@ -180,9 +108,10 @@ mm_install <- function(method = c("auto", "virtualenv", "conda"),
 #' @examples
 #' \dontrun{
 #' library(mixturemodelsr)
-#' mm_setup()  # One-time setup
+#' mm_setup()  # One-time setup, auto-installs Miniconda if needed
 #' }
-mm_setup <- function(force = FALSE, ...) {
+mm_setup <- function(force = FALSE) {
+  # Step 0: Check if already set up
   if (!force && mm_python_available()) {
     message("✓ Mixture-Models Python package is already installed and available")
     message("  Use force = TRUE to reinstall")
@@ -197,16 +126,17 @@ mm_setup <- function(force = FALSE, ...) {
     )
   }
   
-  # Check for explicit Python path override
+  # Step 1: Check for user-specified Python override
   if (nzchar(Sys.getenv("MIXTUREMODELSR_PYTHON", unset = ""))) {
-    message("MIXTUREMODELSR_PYTHON is set. Please install Mixture-Models manually:")
+    message("MIXTUREMODELSR_PYTHON is set.")
+    message("Please ensure Mixture-Models==0.0.8 is installed in that environment:")
     message("  pip install Mixture-Models==0.0.8")
     return(invisible(FALSE))
   }
   
   message("Setting up mixturemodelsr Python dependencies...")
   
-  # Step 1: Ensure Miniconda exists (auto-install for R-only users)
+  # Step 2: Ensure Miniconda exists (auto-install for R-only users)
   if (!reticulate::miniconda_exists()) {
     message("\nMiniconda not found. Installing Miniconda (one-time setup)...")
     message("This may take a few minutes...")
@@ -227,8 +157,14 @@ mm_setup <- function(force = FALSE, ...) {
     message("✓ Miniconda found")
   }
   
-  # Step 2: Install Python packages
-  mm_install(method = "conda", ...)
+  # Step 3: Explicitly activate Miniconda in this session
+  message("Activating Miniconda...")
+  reticulate::use_miniconda()
+  
+  # Step 4: Install Python packages
+  mm_install()
+  
+  invisible(TRUE)
 }
 
 #' Import mixture_models Python module

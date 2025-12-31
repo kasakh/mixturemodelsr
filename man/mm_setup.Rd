@@ -4,12 +4,10 @@
 \alias{mm_setup}
 \title{Setup mixturemodelsr (user-friendly wrapper)}
 \usage{
-mm_setup(force = FALSE, ...)
+mm_setup(force = FALSE)
 }
 \arguments{
 \item{force}{Logical, force reinstallation even if already installed}
-
-\item{...}{Additional arguments passed to \code{\link{mm_install}}}
 }
 \value{
 TRUE invisibly on success
@@ -17,11 +15,11 @@ TRUE invisibly on success
 \description{
 Convenience function that checks if Python dependencies are installed and
 installs them if needed. This is the recommended way for users to set up
-the package.
+the package. Automatically installs Miniconda if not present.
 }
 \examples{
 \dontrun{
 library(mixturemodelsr)
-mm_setup()  # One-time setup
+mm_setup()  # One-time setup, auto-installs Miniconda if needed
 }
 }
