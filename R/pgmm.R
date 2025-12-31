@@ -75,8 +75,12 @@ mm_pgmm_fit <- function(x, k, model_type = NULL, q = NULL,
   # Fit model
   params_store <- model$fit(init_params, optimizer)
   
-  # Get final parameters
-  final_params <- params_store[[length(params_store)]]
+  # Get final parameters robustly (convert to R list first)
+  ps <- reticulate::py_to_r(params_store)
+  if (length(ps) == 0) {
+    stop("Python fit() returned empty params_store (no iterations)", call. = FALSE)
+  }
+  final_params <- ps[[length(ps)]]
   
   # Create fit object
   model_name <- if (!is.null(model_type)) {
@@ -87,7 +91,7 @@ mm_pgmm_fit <- function(x, k, model_type = NULL, q = NULL,
   
   mm_new_fit(
     py_model = model,
-    params_store = params_store,
+    params_store = ps,
     final_params = final_params,
     model_name = model_name,
     k = k,

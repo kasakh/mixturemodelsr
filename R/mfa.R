@@ -65,13 +65,17 @@ mm_mfa_fit <- function(x, k, q = NULL, optimizer = "Newton-CG", scale = 0.5, ...
   # Fit model
   params_store <- model$fit(init_params, optimizer)
   
-  # Get final parameters
-  final_params <- params_store[[length(params_store)]]
+  # Get final parameters robustly (convert to R list first)
+  ps <- reticulate::py_to_r(params_store)
+  if (length(ps) == 0) {
+    stop("Python fit() returned empty params_store (no iterations)", call. = FALSE)
+  }
+  final_params <- ps[[length(ps)]]
   
   # Create fit object
   mm_new_fit(
     py_model = model,
-    params_store = params_store,
+    params_store = ps,
     final_params = final_params,
     model_name = "MFA",
     k = k,
