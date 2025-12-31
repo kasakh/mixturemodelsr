@@ -450,9 +450,16 @@ Sys.setenv(MIXTUREMODELSR_PYTHON = "/path/to/python")
 
 ## Citation
 
-If you use this package, please cite the original Python library:
+If you use this package, please cite the Python library papers:
 
 ```
+@article{kasa2024mixture,
+  title={Mixture-Models: a one-stop Python Library for Model-based Clustering using various Mixture Models},
+  author={Kasa, Siva Rajesh and Yijie, Hu and Kasa, Santhosh Kumar and Rajan, Vaibhav},
+  journal={arXiv preprint arXiv:2402.10229},
+  year={2024}
+}
+
 @article{kasa2020model,
   title={Model-based Clustering using Automatic Differentiation: Confronting Misspecification and High-Dimensional Data},
   author={Kasa, Siva Rajesh and Rajan, Vaibhav},
