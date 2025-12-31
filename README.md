@@ -266,20 +266,88 @@ fit3 <- mm_gmm_fit(x, k = 3, optimizer = "grad_descent")
 fit4 <- mm_gmm_fit(x, k = 3, optimizer = "rms_prop")
 ```
 
-## Mclust Model Types
+## Model Type Options
+
+### Mclust Family (14 Covariance Structures)
 
 The Mclust family uses a three-letter naming convention:
 - **First letter**: Volume (E=equal, V=variable)
 - **Second letter**: Shape (E=equal, V=variable, I=identity)
 - **Third letter**: Orientation (E=equal, V=variable, I=identity)
 
-Common model types:
-- `"EII"`: Spherical, equal volume
-- `"VII"`: Spherical, variable volume  
-- `"EEE"`: Ellipsoidal, equal volume/shape/orientation
-- `"VVV"`: Ellipsoidal, variable (most flexible)
+**Default**: `"VVV"` (most flexible)
 
-Full list: EII, VII, EEI, VEI, EVI, VVI, EEE, VEE, EVE, VVE, EEV, VEV, EVV, VVV
+**All 14 model types**:
+- Spherical: `"EII"`, `"VII"` 
+- Diagonal: `"EEI"`, `"VEI"`, `"EVI"`, `"VVI"`
+- Ellipsoidal: `"EEE"`, `"VEE"`, `"EVE"`, `"VVE"`, `"EEV"`, `"VEV"`, `"EVV"`, `"VVV"`
+
+**Usage**:
+```r
+# Default (VVV)
+fit_default <- mm_mclust_fit(iris[,1:4], k=3)
+
+# Specify model type
+fit_eii <- mm_mclust_fit(iris[,1:4], k=3, model_type="EII")
+fit_eee <- mm_mclust_fit(iris[,1:4], k=3, model_type="EEE")
+```
+
+### PGMM (Parsimonious GMM - 8 Constraint Types)
+
+PGMM uses a three-letter constraint notation:
+- **C**: Common (equal across components)
+- **U**: Unique (variable across components)
+- **Position 1**: Volume, **Position 2**: Shape, **Position 3**: Orientation
+
+**Default**: `"CCC"` (most constrained)
+
+**All 8 constraint types**:
+- `"CCC"` - Common volume, shape, orientation (default)
+- `"CCU"` - Common volume & shape, Unique orientation
+- `"CUC"` - Common volume & orientation, Unique shape
+- `"CUU"` - Common volume, Unique shape & orientation
+- `"UCC"` - Unique volume, Common shape & orientation
+- `"UCU"` - Unique volume & orientation, Common shape
+- `"UUC"` - Unique volume & shape, Common orientation
+- `"UUU"` - Unique volume, shape, orientation (most flexible)
+
+**Usage**:
+```r
+# Default (CCC)
+fit_default <- mm_pgmm_fit(iris[,1:4], k=3, q=2)
+
+# Specify constraint type
+fit_uuu <- mm_pgmm_fit(iris[,1:4], k=3, model_type="UUU", q=2)
+fit_ccu <- mm_pgmm_fit(iris[,1:4], k=3, model_type="CCU", q=2)
+```
+
+**Note**: PGMM requires the `q` parameter (number of latent factors).
+
+### MFA (Mixture of Factor Analyzers)
+
+MFA has **no model types** - it's an unconstrained mixture model. Each component has its own factor loading matrix.
+
+**Usage**:
+```r
+# Only parameters are k (components) and q (latent factors)
+fit <- mm_mfa_fit(iris[,1:4], k=3, q=2)
+```
+
+### Model Selection Strategy
+
+```r
+# Compare different model types
+models <- list(
+  mclust_vvv = mm_mclust_fit(iris[,1:4], k=3, model_type="VVV"),
+  mclust_eee = mm_mclust_fit(iris[,1:4], k=3, model_type="EEE"),
+  pgmm_uuu = mm_pgmm_fit(iris[,1:4], k=3, model_type="UUU", q=2),
+  pgmm_ccc = mm_pgmm_fit(iris[,1:4], k=3, model_type="CCC", q=2)
+)
+
+# Select best by BIC
+bics <- sapply(models, mm_bic)
+best_model <- models[[which.min(bics)]]
+```
 
 ## Available Functions
 
