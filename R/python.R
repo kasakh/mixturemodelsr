@@ -1,13 +1,21 @@
 # R/python.R
-# Conda-first environment provisioning for Mixture-Models compatibility:
-# - Python 3.10
-# - NumPy 1.23.5 (NumPy < 1.24)
-# - PyPI package: Mixture-Models==0.0.8 (imports as Mixture_Models on PyPI)
+# Conda-first environment provisioning for Mixture-Models compatibility.
+#
+# What this guarantees for NEW users:
+# - Installs Miniconda/Miniforge (via reticulate) if missing
+# - Creates a dedicated conda env with Python 3.10
+# - Pins NumPy to 1.23.5 (NumPy < 1.24) to keep legacy aliases (np.int, np.msort)
+# - Installs required deps (matplotlib/scipy/sklearn/autograd/future) WITHOUT upgrading NumPy
+# - Installs Mixture-Models==0.0.8 with --no-deps (prevents pip from drifting NumPy)
+# - Verifies import (PyPI installs as Mixture_Models; source may be mixture_models)
+#
+# Overrides supported:
+# - MIXTUREMODELSR_PYTHON=/path/to/python  -> uses user-provided python (no provisioning)
+# - MIXTUREMODELSR_ENVNAME=yourenvname     -> changes conda env name
 
 #' Get default environment name
 #' @keywords internal
 mm_envname <- function() {
-  # Default to a dedicated env name that encodes the Python requirement
   Sys.getenv("MIXTUREMODELSR_ENVNAME", unset = "mixturemodelsr-py310")
 }
 
@@ -19,6 +27,35 @@ mm_has_conda <- function() {
     is.character(bin) && nzchar(bin)
   }, error = function(e) FALSE)
   ok
+}
+
+#' Is Miniconda/Miniforge installed (reticulate-managed)?
+#' @keywords internal
+mm_miniconda_installed <- function() {
+  mp <- tryCatch(reticulate::miniconda_path(), error = function(e) "")
+  nzchar(mp) && dir.exists(mp)
+}
+
+#' Ensure Miniconda/Miniforge is installed and discoverable
+#' @keywords internal
+mm_ensure_miniconda <- function() {
+  if (!mm_miniconda_installed()) {
+    message("Miniconda not found. Installing (one-time)...")
+    reticulate::install_miniconda()
+  }
+
+  # Help reticulate locate conda reliably across versions
+  mp <- reticulate::miniconda_path()
+  Sys.setenv(RETICULATE_MINICONDA_PATH = mp)
+
+  # Sanity: ensure conda exists at expected location
+  conda_guess <- file.path(mp, "bin", "conda")
+  if (!file.exists(conda_guess)) {
+    # Not fatal here; reticulate may still find it via PATH, but warn.
+    warning("Miniconda path set but conda binary not found at expected location: ", conda_guess)
+  }
+
+  invisible(TRUE)
 }
 
 #' Use configured Python environment (if already available)
@@ -52,57 +89,90 @@ mm_python_available <- function() {
     reticulate::py_module_available("Mixture_Models")
 }
 
+#' Run pip install in the currently active Python
+#' @param packages character vector of requirement strings
+#' @param extra_args character vector of extra pip args (e.g., "--no-deps")
+#' @keywords internal
+mm_pip_install <- function(packages, extra_args = character()) {
+  if (!length(packages)) return(invisible(TRUE))
+  pkgs <- paste(sprintf("\"%s\"", packages), collapse = ", ")
+  args <- if (length(extra_args) > 0) paste(sprintf("\"%s\"", extra_args), collapse = ", ") else ""
+  
+  code <- if (nzchar(args)) {
+    sprintf(
+      "import sys, subprocess\ncmd = [sys.executable, '-m', 'pip', 'install'] + [%s] + [%s]\ncmd = [c for c in cmd if c]\nsubprocess.check_call(cmd)",
+      pkgs, args
+    )
+  } else {
+    sprintf(
+      "import sys, subprocess\ncmd = [sys.executable, '-m', 'pip', 'install'] + [%s]\nsubprocess.check_call(cmd)",
+      pkgs
+    )
+  }
+  
+  reticulate::py_run_string(code)
+  invisible(TRUE)
+}
+
 #' Provision a conda env (Python 3.10 + NumPy 1.23.5) and install Mixture-Models
 #' @param force Logical, remove and recreate the conda env
 #' @keywords internal
 mm_setup_conda <- function(force = FALSE) {
-  # Ensure Miniconda exists (reticulate installs Miniforge/Miniconda)
-  # if (!reticulate::miniconda_exists()) {
-  #   message("Miniconda not found. Installing (one-time)...")
-  #   reticulate::install_miniconda()
-  # }
-
-  mini_path <- tryCatch(reticulate::miniconda_path(), error = function(e) NA_character_)
-  if (is.na(mini_path) || !nzchar(mini_path) || !dir.exists(mini_path)) {
-    message("Miniconda not found. Installing (one-time)...")
-    reticulate::install_miniconda()
-    mini_path <- reticulate::miniconda_path()
-  }
-  # Make sure reticulate can find the conda binary this session
-  reticulate::use_miniconda()
+  mm_ensure_miniconda()
 
   envname <- mm_envname()
 
-  # If force, remove existing env
+  # Remove env if forcing
   if (force && reticulate::condaenv_exists(envname)) {
     message("Removing existing conda environment: ", envname)
     reticulate::conda_remove(envname)
   }
 
-  # Create env if missing
+  # Create env if missing (Python 3.10)
   if (!reticulate::condaenv_exists(envname)) {
     message("Creating conda environment '", envname, "' with Python 3.10 ...")
-    # NOTE: conda_create() will create env and can install python=3.10
     reticulate::conda_create(envname, packages = "python=3.10")
   }
 
   # Activate env
   reticulate::use_condaenv(envname, required = TRUE)
 
-  # Hard-pin numpy (required; upstream uses np.int, np.msort, etc.)
-  message("Installing compatible NumPy (1.23.5) ...")
-  reticulate::py_install("numpy==1.23.5", pip = TRUE)
+  # Ensure pip exists (conda env usually has it, but be safe)
+  try(reticulate::py_run_string("import pip"), silent = TRUE)
 
-  # Install Mixture-Models without allowing dependency upgrades (keeps NumPy pinned)
+  # ---- Critical pins / installs for upstream compatibility ----
+
+  # 1) Pin NumPy to known-good version (keeps np.int, np.msort)
+  message("Pinning NumPy (1.23.5) ...")
+  mm_pip_install("numpy==1.23.5", extra_args = c("--upgrade", "--no-user"))
+
+  # 2) Install required dependencies.
+  # IMPORTANT: do NOT allow these installs to upgrade numpy to 2.x.
+  # We'll re-pin numpy immediately after.
+  message("Installing Python dependencies ...")
+  mm_pip_install(
+    packages = c(
+      "matplotlib<3.9",
+      "scipy<1.12",
+      "scikit-learn<1.4",
+      "autograd==1.3",
+      "future>=0.18.2"
+    ),
+    extra_args = c("--upgrade", "--no-user")
+  )
+
+  # 3) Re-pin NumPy again to prevent drift
+  message("Re-pinning NumPy (1.23.5) ...")
+  mm_pip_install("numpy==1.23.5", extra_args = c("--upgrade", "--no-user"))
+
+  # 4) Install Mixture-Models without deps (prevents numpy upgrades)
   message("Installing Mixture-Models==0.0.8 (no-deps) ...")
-  reticulate::py_run_string("
-import sys, subprocess
-subprocess.check_call([sys.executable, '-m', 'pip', 'install',
-                       '--upgrade', '--no-deps',
-                       'Mixture-Models==0.0.8'])
-")
+  mm_pip_install(
+    packages = "Mixture-Models==0.0.8",
+    extra_args = c("--upgrade", "--no-deps", "--no-user")
+  )
 
-  # Verify import (PyPI provides Mixture_Models; source provides mixture_models)
+  # Verify import (PyPI provides Mixture_Models; source may provide mixture_models)
   ok <- tryCatch({
     reticulate::py_run_string("import Mixture_Models")
     TRUE
@@ -114,9 +184,12 @@ subprocess.check_call([sys.executable, '-m', 'pip', 'install',
   })
 
   if (!ok) {
+    # Provide a helpful hint about numpy if import fails
+    try(reticulate::py_run_string("import numpy as np; print('NumPy version:', np.__version__)"), silent = TRUE)
     stop(
       "Conda provisioning completed but the Python module could not be imported.\n",
-      "Run mm_py_info() for diagnostics.",
+      "This usually means NumPy drifted to an incompatible version.\n",
+      "Try mm_setup(force = TRUE), or run mm_py_info() for diagnostics.",
       call. = FALSE
     )
   }
@@ -143,9 +216,8 @@ mm_require_python <- function(force = FALSE) {
     return(invisible(TRUE))
   }
 
-  # 3) Otherwise, require user to run setup
+  # 3) Otherwise require user to run setup
   if (force) {
-    # mm_setup(force=TRUE) should be used interactively
     stop("Python environment not configured. Run mm_setup(force = TRUE) first.", call. = FALSE)
   } else {
     stop("Python environment not configured. Run mm_setup() first.", call. = FALSE)
