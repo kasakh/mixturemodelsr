@@ -90,7 +90,6 @@ mm_require_python <- function(force = FALSE) {
     reticulate::py_require(
       pkgs,
       python_version = ">=3.9,<3.12",
-      exclude_newer = "2024-01-01",
       action = "set"
     )
   }
