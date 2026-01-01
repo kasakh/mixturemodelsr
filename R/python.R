@@ -4,8 +4,9 @@
 # Guarantees (new users):
 # - Installs Miniconda/Miniforge (via reticulate) if missing
 # - Creates dedicated conda env with Python 3.10
-# - Pins NumPy to 1.23.5
-# - Installs deps without upgrading NumPy
+# - Pins NumPy to 1.23.5 (conda-forge)
+# - Installs core compiled deps via conda-forge (matplotlib/scipy/sklearn) to avoid pip "<" issues
+# - Installs pure-python deps via pip (autograd/future)
 # - Installs Mixture-Models==0.0.8 with --no-deps
 #
 # Key design rule (critical for reliability):
@@ -84,16 +85,24 @@ mm_conda_bin <- function() {
   bin
 }
 
-#' Run a conda command (returns output invisibly)
+#' Run a conda command (stops on error, prints output)
 #' @keywords internal
 mm_conda_run <- function(args) {
   conda <- mm_conda_bin()
-  out <- tryCatch(
-    system2(conda, args = args, stdout = TRUE, stderr = TRUE),
-    error = function(e) {
-      stop("Failed running conda command: conda ", paste(args, collapse = " "), call. = FALSE)
-    }
-  )
+
+  out <- system2(conda, args = args, stdout = TRUE, stderr = TRUE)
+  status <- attr(out, "status")
+
+  if (!is.null(status) && status != 0) {
+    stop(
+      "Conda command failed (exit status ", status, "):\n  conda ",
+      paste(args, collapse = " "),
+      "\n\nOutput:\n",
+      paste(out, collapse = "\n"),
+      call. = FALSE
+    )
+  }
+
   invisible(out)
 }
 
@@ -206,13 +215,18 @@ mm_setup_conda <- function(force = FALSE) {
   message("Installing NumPy (1.23.5) via conda ...")
   mm_conda_run(c("install", "--yes", "-n", envname, "-c", "conda-forge", "numpy=1.23.5"))
 
-  message("Installing Python dependencies via pip (inside env) ...")
+  message("Installing core dependencies via conda (matplotlib/scipy/sklearn) ...")
+  mm_conda_run(c(
+    "install", "--yes", "-n", envname, "-c", "conda-forge",
+    "matplotlib<3.9",
+    "scipy<1.12",
+    "scikit-learn<1.4"
+  ))
+
+  message("Installing remaining dependencies via pip (autograd/future) ...")
   mm_conda_run(c(
     "run", "-n", envname, "python", "-m", "pip", "install",
     "--upgrade", "--no-user",
-    "matplotlib<3.9",
-    "scipy<1.12",
-    "scikit-learn<1.4",
     "autograd==1.3",
     "future>=0.18.2"
   ))
@@ -234,7 +248,7 @@ mm_setup_conda <- function(force = FALSE) {
       "Python was already initialized in this R session, so reticulate cannot switch.\n",
       "Please restart R, then run:\n",
       "  library(mixturemodelsr)\n",
-      "  mm_setup()  # or mm_py_info()\n"
+      "  mm_setup()\n"
     )
     return(invisible(TRUE))
   }
@@ -328,7 +342,6 @@ mm_setup <- function(force = FALSE) {
     return(invisible(TRUE))
   }
 
-  # If already available, done (unless forcing)
   if (!force && mm_python_available()) {
     message("✓ Mixture-Models is already installed and available.")
     return(invisible(TRUE))

@@ -2,11 +2,11 @@
 % Please edit documentation in R/python.R
 \name{mm_conda_run}
 \alias{mm_conda_run}
-\title{Run a conda command (returns output invisibly)}
+\title{Run a conda command (stops on error, prints output)}
 \usage{
 mm_conda_run(args)
 }
 \description{
-Run a conda command (returns output invisibly)
+Run a conda command (stops on error, prints output)
 }
 \keyword{internal}
