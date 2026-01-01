@@ -5,8 +5,8 @@
 # - Installs Miniconda/Miniforge (via reticulate) if missing
 # - Creates dedicated conda env with Python 3.10
 # - Pins NumPy to 1.23.5 (conda-forge)
-# - Installs core compiled deps via conda-forge (matplotlib/scipy/sklearn) WITHOUT "<" to avoid shell redirection issues
-# - Installs pure-python deps via pip (autograd/future)
+# - Installs core compiled deps via conda-forge WITHOUT "<" or ">" (avoids shell redirection issues)
+# - Installs pure-python deps via pip WITHOUT "<" or ">" (autograd)
 # - Installs Mixture-Models==0.0.8 with --no-deps
 #
 # Key design rule (critical for reliability):
@@ -160,7 +160,6 @@ mm_pin_python_and_verify <- function() {
 #' @param required Logical, whether to require Python availability
 #' @keywords internal
 mm_use_env <- function(required = FALSE) {
-  # 1) Explicit python override wins
   py_path <- Sys.getenv("MIXTUREMODELSR_PYTHON", unset = "")
   if (nzchar(py_path)) {
     reticulate::use_python(py_path, required = required)
@@ -168,7 +167,6 @@ mm_use_env <- function(required = FALSE) {
     return(invisible(TRUE))
   }
 
-  # 2) If conda exists and env exists, use it
   envname <- mm_envname()
   if (mm_has_conda() && reticulate::condaenv_exists(envname)) {
     reticulate::use_condaenv(envname, required = required)
@@ -199,13 +197,11 @@ mm_setup_conda <- function(force = FALSE) {
   mm_ensure_miniconda()
   envname <- mm_envname()
 
-  # Remove env if forcing
   if (force && reticulate::condaenv_exists(envname)) {
     message("Removing existing conda environment: ", envname)
     reticulate::conda_remove(envname)
   }
 
-  # Create env if missing (Python 3.10)
   if (!reticulate::condaenv_exists(envname)) {
     message("Creating conda environment '", envname, "' with Python 3.10 ...")
     reticulate::conda_create(envname, packages = "python=3.10")
@@ -215,24 +211,27 @@ mm_setup_conda <- function(force = FALSE) {
   message("Installing NumPy (1.23.5) via conda ...")
   mm_conda_run(c("install", "--yes", "-n", envname, "-c", "conda-forge", "numpy=1.23.5"))
 
-  # Avoid '<' specs (shell redirection hazard on some systems capturing stderr):
-  # - matplotlib<3.9 -> matplotlib=3.8.*
-  # - scipy<1.12     -> scipy=1.11.*
+  # Avoid '<' and '>' entirely (they get treated as redirection in some shells when stdout/stderr captured)
+  # Use wildcard pins instead of inequalities:
+  # - matplotlib<3.9  -> matplotlib=3.8.*
+  # - scipy<1.12      -> scipy=1.11.*
   # - scikit-learn<1.4 -> scikit-learn=1.3.*
-  message("Installing core dependencies via conda (matplotlib/scipy/sklearn) ...")
+  # - future>=0.18.2  -> future=1.0.* (conda-forge currently provides 1.x)
+  message("Installing core dependencies via conda (matplotlib/scipy/sklearn/future) ...")
   mm_conda_run(c(
     "install", "--yes", "-n", envname, "-c", "conda-forge",
     "matplotlib=3.8.*",
     "scipy=1.11.*",
-    "scikit-learn=1.3.*"
+    "scikit-learn=1.3.*",
+    "future=1.0.*"
   ))
 
-  message("Installing remaining dependencies via pip (autograd/future) ...")
+  # Only pure-python dep left; keep pip specs free of '<' and '>' too
+  message("Installing autograd via pip (inside env) ...")
   mm_conda_run(c(
     "run", "-n", envname, "python", "-m", "pip", "install",
     "--upgrade", "--no-user",
-    "autograd==1.3",
-    "future>=0.18.2"
+    "autograd==1.3"
   ))
 
   message("Re-pinning NumPy (1.23.5) via conda ...")
@@ -245,7 +244,6 @@ mm_setup_conda <- function(force = FALSE) {
     "Mixture-Models==0.0.8"
   ))
 
-  # If Python already initialized in this R session, we can't bind to env now.
   if (mm_py_initialized()) {
     message(
       "✓ Environment provisioned.\n",
@@ -257,27 +255,11 @@ mm_setup_conda <- function(force = FALSE) {
     return(invisible(TRUE))
   }
 
-  # Bind reticulate to env and verify imports
   reticulate::use_condaenv(envname, required = TRUE)
 
-  # Verify numpy + Mixture-Models
   reticulate::py_run_string("import numpy as np; print('NumPy OK:', np.__version__)")
+  reticulate::py_run_string("import Mixture_Models; print('Mixture-Models OK')")
 
-  ok <- tryCatch({
-    reticulate::py_run_string("import Mixture_Models; print('Mixture_Models OK')")
-    TRUE
-  }, error = function(e) {
-    tryCatch({
-      reticulate::py_run_string("import mixture_models; print('mixture_models OK')")
-      TRUE
-    }, error = function(e2) FALSE)
-  })
-
-  if (!ok) {
-    stop("Mixture-Models installed but not importable after setup.", call. = FALSE)
-  }
-
-  # Pin python path for future sessions (prevents drift)
   Sys.setenv(MIXTUREMODELSR_PYTHON = reticulate::py_config()$python)
 
   message("✓ Python ready: Python 3.10 + NumPy 1.23.5 + Mixture-Models 0.0.8")
@@ -330,7 +312,6 @@ mm_setup <- function(force = FALSE) {
     )
   }
 
-  # Respect user override python, just validate
   py_path <- Sys.getenv("MIXTUREMODELSR_PYTHON", unset = "")
   if (nzchar(py_path)) {
     reticulate::use_python(py_path, required = TRUE)
