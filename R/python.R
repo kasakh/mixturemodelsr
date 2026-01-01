@@ -5,7 +5,7 @@
 # - Installs Miniconda/Miniforge (via reticulate) if missing
 # - Creates dedicated conda env with Python 3.10
 # - Pins NumPy to 1.23.5 (conda-forge)
-# - Installs core compiled deps via conda-forge (matplotlib/scipy/sklearn) to avoid pip "<" issues
+# - Installs core compiled deps via conda-forge (matplotlib/scipy/sklearn) WITHOUT "<" to avoid shell redirection issues
 # - Installs pure-python deps via pip (autograd/future)
 # - Installs Mixture-Models==0.0.8 with --no-deps
 #
@@ -215,12 +215,16 @@ mm_setup_conda <- function(force = FALSE) {
   message("Installing NumPy (1.23.5) via conda ...")
   mm_conda_run(c("install", "--yes", "-n", envname, "-c", "conda-forge", "numpy=1.23.5"))
 
+  # Avoid '<' specs (shell redirection hazard on some systems capturing stderr):
+  # - matplotlib<3.9 -> matplotlib=3.8.*
+  # - scipy<1.12     -> scipy=1.11.*
+  # - scikit-learn<1.4 -> scikit-learn=1.3.*
   message("Installing core dependencies via conda (matplotlib/scipy/sklearn) ...")
   mm_conda_run(c(
     "install", "--yes", "-n", envname, "-c", "conda-forge",
-    "matplotlib<3.9",
-    "scipy<1.12",
-    "scikit-learn<1.4"
+    "matplotlib=3.8.*",
+    "scipy=1.11.*",
+    "scikit-learn=1.3.*"
   ))
 
   message("Installing remaining dependencies via pip (autograd/future) ...")
